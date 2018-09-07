@@ -4,6 +4,10 @@ import torch.optim as optim
 from torch.nn import functional as F
 from torchvision import datasets, transforms
 from torchvision.utils import save_image
+
+from tensorboardX import SummaryWriter
+from tqdm import tqdm
+
 from model import ConvVAE
 
 
@@ -28,7 +32,7 @@ def train(epoch, model, train_loader, optimizer, args):
     model.train()
     train_loss = 0
 
-    for batch_idx, (data, _) in enumerate(train_loader):
+    for batch_idx, (data, _) in tqdm(enumerate(train_loader), total=len(train_loader), desc='train'):
         data = data.to(device)
 
         optimizer.zero_grad()
@@ -50,7 +54,7 @@ def test(epoch, model, test_loader, args):
     test_loss = 0
 
     with torch.no_grad():
-        for batch_idx, (data, _) in enumerate(test_loader):
+        for batch_idx, (data, _) in tqdm(enumerate(test_loader), total=len(test_loader), desc='test'):
             data = data.to(device)
 
             recon_batch, mu, logvar = model(data)
@@ -71,7 +75,7 @@ def main():
     parser = argparse.ArgumentParser(description='Convolutional VAE MNIST Example')
     parser.add_argument('--result_dir', type=str, default='results', metavar='DIR',
                         help='output directory')
-    parser.add_argument('--batch_size', type=int, default=128, metavar='N',
+    parser.add_argument('--batch_size', type=int, default=100, metavar='N',
                         help='input batch size for training (default: 128)')
     parser.add_argument('--epochs', type=int, default=10, metavar='N',
                         help='number of epochs to train (default: 10)')
@@ -86,7 +90,7 @@ def main():
 
     torch.manual_seed(args.seed)
 
-    kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
+    kwargs = {'num_workers': 1, 'pin_memory': True} if cuda else {}
 
     train_loader = torch.utils.data.DataLoader(
         datasets.MNIST('./data', train=True, download=True, transform=transforms.ToTensor()),
