@@ -118,7 +118,7 @@ def main():
     model = ConvVAE(args.latent_size).to(device)
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
-    start_epoch = 1
+    start_epoch = 0
     best_test_loss = np.finfo('f').max
 
     # optionally resume from a checkpoint
@@ -126,7 +126,7 @@ def main():
         if os.path.isfile(args.resume):
             print('=> loading checkpoint %s' % args.resume)
             checkpoint = torch.load(args.resume)
-            start_epoch = checkpoint['epoch']
+            start_epoch = checkpoint['epoch'] + 1
             best_test_loss = checkpoint['best_test_loss']
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
@@ -136,7 +136,7 @@ def main():
 
     writer = SummaryWriter()
 
-    for epoch in range(start_epoch, args.epochs + 1):
+    for epoch in range(start_epoch, args.epochs):
         train_loss = train(epoch, model, train_loader, optimizer, args)
         test_loss = test(epoch, model, test_loader, writer, args)
 
@@ -150,9 +150,8 @@ def main():
         best_test_loss = min(test_loss, best_test_loss)
         save_checkpoint({
             'epoch': epoch,
+            'best_test_loss': best_test_loss,
             'state_dict': model.state_dict(),
-            'train_loss': train_loss,
-            'test_loss': test_loss,
             'optimizer': optimizer.state_dict(),
         }, is_best)
 
