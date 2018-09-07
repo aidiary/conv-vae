@@ -130,7 +130,7 @@ def main():
             best_test_loss = checkpoint['best_test_loss']
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
-            print('=> loaded checkpoint %s (epoch: %d)' % (args.resume, checkpoint['epoch']))
+            print('=> loaded checkpoint %s' % args.resume)
         else:
             print('=> no checkpoint found at %s' % args.resume)
 
@@ -144,7 +144,7 @@ def main():
         writer.add_scalar('train/loss', train_loss, epoch)
         writer.add_scalar('test/loss', test_loss, epoch)
 
-        print('Epoch [%d/%d] loss: %.3f val_loss: %.3f' % (epoch, args.epochs, train_loss, test_loss))
+        print('Epoch [%d/%d] loss: %.3f val_loss: %.3f' % (epoch + 1, args.epochs, train_loss, test_loss))
 
         is_best = test_loss < best_test_loss
         best_test_loss = min(test_loss, best_test_loss)
