@@ -152,7 +152,7 @@ def main():
             'train_loss': train_loss,
             'test_loss': test_loss,
             'optimizer': optimizer.state_dict(),
-        }, is_best, filename=os.path.join(args.results_dir, 'checkpoint.pth'))
+        }, is_best, filename=os.path.join(args.result_dir, 'checkpoint.pth'))
 
         with torch.no_grad():
             sample = torch.randn(64, 32).to(device)
