@@ -115,6 +115,8 @@ def main():
         writer.add_scalar('train/loss', train_loss, epoch)
         writer.add_scalar('test/loss', test_loss, epoch)
 
+        print('Epoch [%d/%d] loss: %.3f val_loss: %.3f' % (epoch, args.epochs, train_loss, test_loss))
+
         with torch.no_grad():
             sample = torch.randn(64, 32).to(device)
             sample = model.decode(sample).cpu()
