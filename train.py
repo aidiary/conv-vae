@@ -5,6 +5,9 @@ from torch.nn import functional as F
 from torchvision import datasets, transforms
 from torchvision.utils import save_image, make_grid
 
+import os
+import shutil
+import numpy as np
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
 
@@ -73,6 +76,12 @@ def test(epoch, model, test_loader, writer, args):
     return test_loss
 
 
+def save_checkpoint(state, is_best, filename='checkpoint.pth'):
+    torch.save(state, filename)
+    if is_best:
+        shutil.copyfile(filename, 'model_best.pth')
+
+
 def main():
     parser = argparse.ArgumentParser(description='Convolutional VAE MNIST Example')
     parser.add_argument('--result_dir', type=str, default='results', metavar='DIR',
@@ -83,6 +92,8 @@ def main():
                         help='number of epochs to train (default: 10)')
     parser.add_argument('--seed', type=int, default=1, metavar='S',
                         help='random seed (default: 1)')
+    parser.add_argument('--resume', default='', type=str, metavar='PATH',
+                        help='path to latest checkpoint (default: None')
 
     # model options
     parser.add_argument('--latent_size', type=int, default=32, metavar='N',
@@ -105,9 +116,25 @@ def main():
     model = ConvVAE(args.latent_size).to(device)
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
+    start_epoch = 1
+    best_test_loss = np.finfo('f').max
+
+    # optionally resume from a checkpoint
+    if args.resume:
+        if os.path.isfile(args.resume):
+            print('=> loading checkpoint %s' % args.resume)
+            checkpoint = torch.load(args.resume)
+            start_epoch = checkpoint['epoch']
+            best_test_loss = checkpoint['best_test_loss']
+            model.load_state_dict(checkpoint['state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            print('=> loaded checkpoint %s (epoch: %d)' % (args.resume, checkpoint['epoch']))
+        else:
+            print('=> no checkpoint found at %s' % args.resume)
+
     writer = SummaryWriter()
 
-    for epoch in range(1, args.epochs + 1):
+    for epoch in range(start_epoch, args.epochs + 1):
         train_loss = train(epoch, model, train_loader, optimizer, args)
         test_loss = test(epoch, model, test_loader, writer, args)
 
@@ -116,6 +143,16 @@ def main():
         writer.add_scalar('test/loss', test_loss, epoch)
 
         print('Epoch [%d/%d] loss: %.3f val_loss: %.3f' % (epoch, args.epochs, train_loss, test_loss))
+
+        is_best = test_loss < best_test_loss
+        best_test_loss = min(test_loss, best_test_loss)
+        save_checkpoint({
+            'epoch': epoch,
+            'state_dict': model.state_dict(),
+            'train_loss': train_loss,
+            'test_loss': test_loss,
+            'optimizer': optimizer.state_dict(),
+        }, is_best, filename=os.path.join(args.results_dir, 'checkpoint.pth'))
 
         with torch.no_grad():
             sample = torch.randn(64, 32).to(device)
