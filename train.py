@@ -69,17 +69,19 @@ def test(epoch, model, test_loader, writer, args):
                 comparison = torch.cat([data[:n], recon_batch.view(args.batch_size, 1, 28, 28)[:n]]).cpu()
                 img = make_grid(comparison)
                 writer.add_image('reconstruction', img, epoch)
-                save_image(comparison.cpu(), 'results/reconstruction_' + str(epoch) + '.png', nrow=n)
+                # save_image(comparison.cpu(), 'results/reconstruction_' + str(epoch) + '.png', nrow=n)
 
     test_loss /= len(test_loader.dataset)
 
     return test_loss
 
 
-def save_checkpoint(state, is_best, filename='checkpoint.pth'):
-    torch.save(state, filename)
+def save_checkpoint(state, is_best, outdir='results'):
+    checkpoint_file = os.path.join(outdir, 'checkpoint.pth')
+    best_file = os.path.join(outdir, 'model_best.pth')
+    torch.save(state, checkpoint_file)
     if is_best:
-        shutil.copyfile(filename, 'model_best.pth')
+        shutil.copyfile(checkpoint_file, best_file)
 
 
 def main():
@@ -152,14 +154,14 @@ def main():
             'train_loss': train_loss,
             'test_loss': test_loss,
             'optimizer': optimizer.state_dict(),
-        }, is_best, filename=os.path.join(args.result_dir, 'checkpoint.pth'))
+        }, is_best)
 
         with torch.no_grad():
             sample = torch.randn(64, 32).to(device)
             sample = model.decode(sample).cpu()
             img = make_grid(sample)
             writer.add_image('sampling', img, epoch)
-            save_image(sample.view(64, 1, 28, 28), 'results/sample_' + str(epoch) + '.png')
+            # save_image(sample.view(64, 1, 28, 28), 'results/sample_' + str(epoch) + '.png')
 
 
 if __name__ == '__main__':
