@@ -3,7 +3,7 @@ import torch
 import torch.optim as optim
 from torch.nn import functional as F
 from torchvision import datasets, transforms
-from torchvision.utils import save_image
+from torchvision.utils import save_image, make_grid
 
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
@@ -49,7 +49,7 @@ def train(epoch, model, train_loader, optimizer, args):
     return train_loss
 
 
-def test(epoch, model, test_loader, args):
+def test(epoch, model, test_loader, writer, args):
     model.eval()
     test_loss = 0
 
@@ -63,7 +63,9 @@ def test(epoch, model, test_loader, args):
 
             if batch_idx == 0:
                 n = min(data.size(0), 8)
-                comparison = torch.cat([data[:n], recon_batch.view(args.batch_size, 1, 28, 28)[:n]])
+                comparison = torch.cat([data[:n], recon_batch.view(args.batch_size, 1, 28, 28)[:n]]).cpu()
+                img = make_grid(comparison)
+                writer.add_image('reconstruction', img, epoch)
                 save_image(comparison.cpu(), 'results/reconstruction_' + str(epoch) + '.png', nrow=n)
 
     test_loss /= len(test_loader.dataset)
@@ -103,14 +105,22 @@ def main():
     model = ConvVAE(args.latent_size).to(device)
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
+    writer = SummaryWriter()
+
     for epoch in range(1, args.epochs + 1):
         train_loss = train(epoch, model, train_loader, optimizer, args)
-        test_loss = test(epoch, model, test_loader, args)
+        test_loss = test(epoch, model, test_loader, writer, args)
+
+        # logging
+        writer.add_scalar('train/loss', train_loss, epoch)
+        writer.add_scalar('test/loss', test_loss, epoch)
+
         with torch.no_grad():
             sample = torch.randn(64, 32).to(device)
             sample = model.decode(sample).cpu()
-            save_image(sample.view(64, 1, 28, 28),
-                       'results/sample_' + str(epoch) + '.png')
+            img = make_grid(sample)
+            writer.add_image('sampling', img, epoch)
+            save_image(sample.view(64, 1, 28, 28), 'results/sample_' + str(epoch) + '.png')
 
 
 if __name__ == '__main__':
